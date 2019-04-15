@@ -18,15 +18,19 @@ struct proc_dir_entry *mypde;
 static int proc_init(void);
 static void proc_exit(void);
 static ssize_t procfile_read(struct file* , char *,size_t ,loff_t *);
+static ssize_t procfile_write(struct file* ,const char *,size_t ,loff_t *);
 static struct file_operations fops = {
-	.read = procfile_read
+	.read = procfile_read,
+	.write = procfile_write
+
 };
+static int code = 0;
 /*
  * This function is called when the module is loaded
  */
 static int __init proc_init(void)
 {
-        mypde = proc_create(procf_name, 0644, NULL, &fops);
+        mypde = proc_create(procf_name, 0666, NULL, &fops);
 	if(mypde==NULL)
 	{
 		remove_proc_entry(procf_name, NULL); // empty do while define in proc_fs.h
@@ -63,12 +67,26 @@ static ssize_t procfile_read(struct file *filp, char *buffer, size_t length, lof
 	}
 	else
 	{
-		int len =   sprintf(buffer, "Helloproc\n");
+		int len =   sprintf(buffer, "Code: %i\n", code);
 		*offset = len;
 		return len;
 	}
 	
 }
+
+static ssize_t procfile_write(struct file *filp, const char *buffer, size_t length, loff_t *offset)
+{
+	int num, c;
+	printk(KERN_INFO "/proc/%s write\n", procf_name);
+	if(*offset > 0)
+		return -EFAULT;
+	num = sscanf(buffer, "%i", &code);
+	c = strlen(buffer);
+	*offset = c;
+	return c;
+}
+
+
 
 module_init(proc_init);
 module_exit(proc_exit);
